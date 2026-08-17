@@ -1,5 +1,7 @@
 # resilient-scraper
 
+![](images/preview.png)
+
 A scraper that survives the modern web, and tells you the truth when it doesn't.
 
 Most "my scraper stopped working" jobs are one of four failures. This is the escalation
