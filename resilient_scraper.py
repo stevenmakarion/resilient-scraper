@@ -135,6 +135,20 @@ def scrape(url, selector=None, force_tier=None, retries=2, backoff=3.0):
                 raw = fn(url, selector) if n == 3 else fn(url)
                 data = (raw.splitlines() if n == 3 and selector
                         else extract(raw, selector))
+                # A REQUESTED SELECTOR THAT MATCHES NOTHING IS NOT A SUCCESS.
+                # Fixed 2026-09-09. This used to return ok=True with count=0 the
+                # moment any tier returned HTML, so asking for "a.title" on a page
+                # that has none reported success with an empty list. That directly
+                # contradicts this module's own docstring, which promises "never a
+                # silent empty result", and it is the worst failure a scraper has:
+                # the caller stores zero rows and believes the site had none.
+                # Zero matches usually means the markup was JS-rendered, which is
+                # exactly what the higher tiers exist for, so raise and let the
+                # ladder continue rather than stopping on a false win.
+                if selector and isinstance(data, list) and not data:
+                    raise Blocked(
+                        f"tier{n}: fetched {len(raw)} bytes but selector "
+                        f"{selector!r} matched 0 elements (likely JS-rendered)")
                 return {"ok": True, "url": url, "tier": n,
                         "ms": int((time.time() - t0) * 1000),
                         "count": len(data) if isinstance(data, list) else 1,
